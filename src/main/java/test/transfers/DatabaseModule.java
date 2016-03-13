@@ -8,6 +8,7 @@ import com.google.inject.matcher.Matchers;
 import com.google.inject.name.Named;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import org.sql2o.Sql2o;
+import org.sql2o.quirks.PostgresQuirks;
 import test.transfers.service.AccountService;
 import test.transfers.service.DatabaseService;
 import test.transfers.service.TransferService;
@@ -60,6 +61,6 @@ public class DatabaseModule extends AbstractModule {
   @Singleton
   @Inject
   Sql2o createSql2o(DataSource dataSource) {
-    return new Sql2o(dataSource);
+    return new Sql2o(dataSource, new PostgresQuirks());
   }
 }

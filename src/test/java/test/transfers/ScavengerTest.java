@@ -6,7 +6,10 @@ import org.sql2o.Sql2o;
 import test.transfers.model.Account;
 import test.transfers.resource.AccountResource;
 import test.transfers.service.DatabaseService;
+import test.transfers.service.QueueService;
+
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 import static org.junit.Assert.assertEquals;
@@ -16,35 +19,42 @@ public class ScavengerTest extends TestBase {
       "VALUES (:accountId, :amount, :finished, :updated)";
 
   @Test
-  public void testAccountCreation() throws InterruptedException {
+  public void testScavenger() {
     AccountResource accountResource = injector.getInstance(AccountResource.class);
     DatabaseService databaseService = injector.getInstance(DatabaseService.class);
+    QueueService queueService = injector.getInstance(QueueService.class);
 
     Account account = accountResource.create(new BigDecimal(10));
 
     try (Connection connection = injector.getInstance(Sql2o.class).open()) {
-      createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now());
+      queueService.submitJob(
+          createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now()));
+
       createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now().minusMinutes(20));
       createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now().minusMinutes(20));
-      createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now());
+
+      queueService.submitJob(
+          createTransaction(connection, account.getAccountId(), BigDecimal.ONE, false, LocalDateTime.now()));
       createTransaction(connection, account.getAccountId(), BigDecimal.ONE, true, LocalDateTime.now().minusMinutes(20));
     }
 
-    databaseService.reQueueStalledTransactions();
+    int processed = databaseService.reQueueStalledTransactions();
+    assertEquals(2, processed);
 
-    Thread.sleep(1000);
+    waitTransactionsFinished();
 
     Account accountFetched = accountResource.get(account.getAccountId());
 
-    assertEquals(account.getBalance().add(new BigDecimal(2)), accountFetched.getBalance());
+    assertEquals(account.getBalance().add(new BigDecimal(4)), accountFetched.getBalance());
   }
 
-  private void createTransaction(Connection connection, Long accountId, BigDecimal amount, boolean finished, LocalDateTime updated) {
-    connection.createQuery(INSERT)
+  private Long createTransaction(Connection connection, Long accountId, BigDecimal amount, boolean finished, LocalDateTime updated) {
+    return connection.createQuery(INSERT, true)
         .addParameter("accountId", accountId)
         .addParameter("amount", amount)
-        .addParameter("updated", updated.toString())
+        .addParameter("updated", Timestamp.valueOf(updated))
         .addParameter("finished", finished)
-        .executeUpdate();
+        .executeUpdate()
+        .getKey(Long.class);
   }
 }

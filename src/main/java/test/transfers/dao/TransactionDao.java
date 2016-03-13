@@ -12,7 +12,7 @@ public class TransactionDao {
       "VALUES (:accountId, :amount, :finished)";
   private static final String SELECT = "SELECT transaction_id as transactionId, account_id as accountId, amount, finished " +
       "FROM transaction where transaction_id = :transactionId";
-  private static final String UPDATE = "UPDATE transaction SET finished = :finished";
+  private static final String UPDATE = "UPDATE transaction SET finished = :finished WHERE transaction_id = :transactionId";
 
   @Inject
   private JdbcTransactionManager transactionManager;

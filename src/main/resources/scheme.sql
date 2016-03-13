@@ -1,15 +1,18 @@
-CREATE TABLE IF NOT EXISTS account (
+DROP TABLE IF EXISTS transaction CASCADE;
+DROP TABLE IF EXISTS account CASCADE;
+
+CREATE TABLE account (
   account_id BIGSERIAL,
   balance numeric(19, 2) NOT NULL,
   PRIMARY KEY (account_id)
 );
 
-CREATE TABLE IF NOT EXISTS transaction (
+CREATE TABLE transaction (
   transaction_id BIGSERIAL,
   account_id BIGINT,
   amount numeric(19, 2) NOT NULL,
   finished BOOLEAN,
-  updated DATETIME default now(),
+  updated TIMESTAMP DEFAULT now(),
   PRIMARY KEY (transaction_id)
 );
 

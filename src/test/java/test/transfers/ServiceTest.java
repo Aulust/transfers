@@ -23,7 +23,7 @@ public class ServiceTest extends TestBase {
   }
 
   @Test
-  public void testTransfer() throws InterruptedException {
+  public void testTransfer() {
     AccountResource accountResource = injector.getInstance(AccountResource.class);
     TransferResource transferResource = injector.getInstance(TransferResource.class);
 
@@ -43,10 +43,7 @@ public class ServiceTest extends TestBase {
       } catch (InterruptedException ignored) { }
     });
 
-    while (hasUnfinishedTransactions()) {
-      Thread.sleep(200);
-    }
-    Thread.sleep(1000);
+    waitTransactionsFinished();
 
     assertEquals(aliceAccount.getBalance().subtract(new BigDecimal(1000)), accountResource.get(aliceAccount.getAccountId()).getBalance());
     assertEquals(bobAccount.getBalance().add(new BigDecimal(1000)), accountResource.get(bobAccount.getAccountId()).getBalance());

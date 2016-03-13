@@ -9,6 +9,8 @@ import org.sql2o.Sql2o;
 import test.transfers.service.DatabaseService;
 
 public class TestBase {
+  private static final String COUNT_NOT_FINISHED_TRANSACTIONS = "SELECT count(*) FROM transaction WHERE finished = false";
+
   protected static Injector injector;
 
   @BeforeClass
@@ -18,9 +20,19 @@ public class TestBase {
     injector.getInstance(DatabaseService.class).initDatabase();
   }
 
-  protected static boolean hasUnfinishedTransactions() {
-    try (Connection connection = injector.getInstance(Sql2o.class).open()) {
-      return connection.createQuery("SELECT count(*) FROM transaction WHERE finished = false").executeAndFetchFirst(Long.class) > 0;
+  protected static void waitTransactionsFinished() {
+    while (true) {
+      try (Connection connection = injector.getInstance(Sql2o.class).open()) {
+        if (connection.createQuery(COUNT_NOT_FINISHED_TRANSACTIONS).executeAndFetchFirst(Long.class) == 0) {
+          return;
+        }
+      }
+
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }
